@@ -14,8 +14,8 @@ mapping = './data/mapping.json'
 distance = 0.7 #distance in classifying
 pixel = 50
 OModel_path = './data/object_detection/resnet50_csv_06.h5'
-CModel_path = './data/classification/Arcface (1).h5'
-dir_cluster = './data/cluster (1).npy'
+CModel_path = './data/classification/Arcface.h5'
+dir_cluster = './data/cluster.npy'
 
 class Window(Frame):
 
