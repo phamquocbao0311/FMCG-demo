@@ -9,7 +9,7 @@ import json
 import random
 
 size_image = (80,80)
-referencce_image_path = 'D:\\product_image\\images\\perfect_store_images\\'
+referencce_image_path = './data/label_image/'
 mapping = './data/mapping.json'
 distance = 0.7 #distance in classifying
 pixel = 50
