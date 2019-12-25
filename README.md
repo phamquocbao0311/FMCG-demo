@@ -4,7 +4,9 @@ This is a demo for FMCG using tkinter.
 This project I will focus on dectecting object and classifying each object into distinct categories. Images could contain above 500 objects and each object look very similar or even identical, positioned in close proximity. I have to compare the rules which manufacture give with the arrangement of objects in image and make sure the image satisfies the rule.
 ## Getting started
 First, you download the models and images follow the link: [here](https://drive.google.com/drive/folders/1HYADyV8-Hrd9Pvcq3XRVVh8-Mci8FD9X?usp=sharing) and put them into its directory.  
-Then run the command: `python main.py`
+Then install the library in requirements.txt `pip install -r requirements.txt`
+Finally run the command: `python main.py`  
+It works well with python 3.6.
 ## How does this demo work?
 ![](/images/Solution.jpg)
 This demo have two step:  
