@@ -1,5 +1,6 @@
 # FMCG-demo
 This is a demo for FMCG using tkinter.
+![](images/demo.gif)
 ## Introduction
 This project I will focus on dectecting object and classifying each object into distinct categories. Images could contain above 500 objects and each object look very similar or even identical, positioned in close proximity. I have to compare the rules which manufacture give with the arrangement of objects in image and make sure the image satisfies the rule.
 ## Getting started
