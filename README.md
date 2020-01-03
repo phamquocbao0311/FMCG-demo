@@ -22,6 +22,6 @@ Case 2:
 ![](/images/img1.JPG)
 ![](/images/img3.JPG)
 ## Note
-- The data for training object detection is prohibited because of my company's policy.
+- The data for training object detection is prohibited due to my company's policy.
 - Each object near by each other, so when perform object detection, I used IOU again to filter overlapped box instead of GMM with EM.
 - When using KNN algorithm, I only choose 5 image per category due to imbalance data. Then I compute sum of average, so n_neighbor = 1.
