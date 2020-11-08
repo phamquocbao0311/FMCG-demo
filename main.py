@@ -38,12 +38,10 @@ class Window(Frame):
                            outline='red', width=2)
         self.show_img(self.store_img_lable, image, 0, 0)
 
-    def detect_bbox(self):
+    def detect_bbox(self, name):
         self.bboxes = self.detecting.predict_bb(name=self.name)
 
     def btn_detect(self):
-
-        # Important to copy image before detect
         image = self.image
         self.detect_bbox(image)
         bboxes = self.bboxes
@@ -173,6 +171,7 @@ class Window(Frame):
 
     def read_image(self):
         load = Image.open(self.open_file())
+
         self.image = load
         self.original_image = self.image.copy()
         return load
