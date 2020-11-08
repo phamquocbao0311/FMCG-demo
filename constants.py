@@ -1,0 +1,9 @@
+IMAGE_SIZE = (80, 80)
+REFERENCE_IMAGE_PATH = './data/label_image/'
+MAPPING = './data/mapping.json'
+DISTANCE = 0.7  # distance in classifying
+PIXEL = 50
+OBJECT_DETECTION_MODEL_PATH = './data/object_detection/resnet50_csv_06.h5'
+CLASSIFYING_MODEL_PATH = './data/classification/Arcface.h5'
+CLUSTER_PATH = './data/cluster.npy'
+NUMBER_CLASS = 143

@@ -2,20 +2,14 @@ import tkinter
 from tkinter.filedialog import askopenfilename
 from tkinter import *
 from PIL import Image, ImageTk, ImageDraw
-import model
-import classifying_model
+
+import constants
+from models import classification, object_detection
 import numpy as np
 import json
 import random
+from utils.files import JsonFile
 
-size_image = (80,80)
-referencce_image_path = './data/label_image/'
-mapping = './data/mapping.json'
-distance = 0.7 #distance in classifying
-pixel = 50
-OModel_path = './data/object_detection/resnet50_csv_06.h5'
-CModel_path = './data/classification/Arcface.h5'
-dir_cluster = './data/cluster.npy'
 
 class Window(Frame):
 
@@ -30,28 +24,26 @@ class Window(Frame):
         # with that, we want to then run init_window, which doesn't yet exist
         self.init_window()
 
-        self.store_img = Label(master=master)
+        # Load model
+        self.detecting = object_detection.get_detecting_model()
+        self.classifying = classification.get_classifying_model()
 
-        self.var = StringVar()
-        self.reference_image = Label(master= master, compound = BOTTOM, textvariable = self.var, font=("Helvetica", 16))
         self.bboxes = None
-
-        with open(mapping) as f:
-            self.label_to_name = json.load(f)
-
-        self.model = model.Model(OModel_path)
-        self.classifying = classifying_model.Classifying(CModel_path, dir_cluster)
+        self.label_to_name = JsonFile(constants.MAPPING).load()
 
     def draw_bb(self, image, bboxes):
         draw = ImageDraw.Draw(image)
         for bbox in bboxes:
-            draw.rectangle(((bbox[0], bbox[1]), (bbox[2], bbox[3])), outline='red', width=2)
-        self.showImg(self.store_img, image, 0, 0)
+            draw.rectangle(((bbox[0], bbox[1]), (bbox[2], bbox[3])),
+                           outline='red', width=2)
+        self.show_img(self.store_img_lable, image, 0, 0)
 
-    def detect_bbox(self, name):
-        self.bboxes = self.model.predict_bb(name = self.name)
+    def detect_bbox(self):
+        self.bboxes = self.detecting.predict_bb(name=self.name)
 
     def btn_detect(self):
+
+        # Important to copy image before detect
         image = self.image
         self.detect_bbox(image)
         bboxes = self.bboxes
@@ -65,19 +57,32 @@ class Window(Frame):
         self.pack(fill=BOTH, expand=1)
 
         self.var = StringVar()
-        self.label = Label(master=self.master, textvariable = self.var, font=("Helvetica", 16))
+        self.label = Label(master=self.master, textvariable=self.var,
+                           font=("Helvetica", 16))
         self.label.pack()
 
-        self.button = Button(master=self.master, command  = self.btn_open, text = 'Open File')
-        self.button.pack()
+        self.open_file_btn = Button(master=self.master, command=self.btn_open,
+                                    text='Open File')
+        self.open_file_btn.pack()
 
-        self.button_detect = Button(master = self.master, command = self.btn_detect, text = 'Detect Image')
-        self.button_detect.pack()
+        self.detect_btn = Button(master=self.master,
+                                 command=self.btn_detect,
+                                 text='Detect Image')
+        self.detect_btn.pack()
 
-        self.button_report = Button(master=self.master, command=lambda: self.new_window(NewWin).pack(), text='Report')
-        self.button_report.pack()
+        self.report_btn = Button(master=self.master,
+                                 command=lambda: self.new_window(
+                                        NewWin).pack(), text='Report')
+        self.report_btn.pack()
 
         self.master.bind('<Motion>', self.motion)
+
+        self.store_img_lable = Label(master=self.master)
+
+        self.var = StringVar()
+        self.reference_image_label = Label(master=self.master, compound=BOTTOM,
+                                           textvariable=self.var,
+                                           font=("Helvetica", 16))
 
     def new_window(self, _class):
         self.new = Toplevel(self.master)
@@ -85,25 +90,27 @@ class Window(Frame):
 
         self.report_label = Label(master=self.new)
 
-        #filter bboxes in classifying
+        # filter bboxes in classifying
         self.report_bboxes = {}
         self.new_bb = []
         for box in self.bboxes:
             crop_image = self.image.crop((box[0], box[1], box[2], box[3]))
-            crop_image = crop_image.resize(size_image)
+            crop_image = crop_image.resize(constants.IMAGE_SIZE)
             dist, ind = self.classifying.predict_class(crop_image)
-            if self.label_to_name[str(ind[0][0])] not in self.report_bboxes.keys() and dist < distance:
+            if self.label_to_name[str(ind[0][
+                                          0])] not in self.report_bboxes.keys() and dist < constants.DISTANCE:
                 self.report_bboxes[self.label_to_name[str(ind[0][0])]] = []
-            if dist < distance:
-                self.report_bboxes[self.label_to_name[str(ind[0][0])]].append(box)
+            if dist < constants.DISTANCE:
+                self.report_bboxes[self.label_to_name[str(ind[0][0])]].append(
+                    box)
                 self.new_bb.append(box)
 
-        #sort bboxes
+        # sort bboxes
         self.filter_bboxes = []
         for i in range(10):
 
-            #find minbox
-            minbox = [1024,1024,1024,1024]
+            # find minbox
+            minbox = [1024, 1024, 1024, 1024]
             for box in self.new_bb:
                 if box in np.array(self.filter_bboxes):
                     continue
@@ -111,7 +118,7 @@ class Window(Frame):
                     minbox = box
             self.filter_bboxes.append(minbox)
 
-            #find near box
+            # find near box
             for box2 in self.new_bb:
                 # random.shuffle(self.new_bb)
                 lastbox = self.filter_bboxes[-1]
@@ -123,14 +130,16 @@ class Window(Frame):
                 for box1 in self.new_bb:
                     if box1 in np.array(self.filter_bboxes):
                         continue
-                    if ((lastbox[1] < box1[1] and lastbox[3] > box1[1]) or (lastbox[1] > box1[1] and lastbox[1] < box1[3])) and box1[0] - lastbox[2] < distance2box:
+                    if ((lastbox[1] < box1[1] and lastbox[3] > box1[1]) or (
+                            lastbox[1] > box1[1] and lastbox[1] < box1[3])) and \
+                            box1[0] - lastbox[2] < distance2box:
                         nearbox = box1
                         distance2box = box1[0] - lastbox[2]
                         s = 1
                 if s == 1:
                     self.filter_bboxes.append(nearbox)
 
-        #draw bboxes
+        # draw bboxes
         draw = ImageDraw.Draw(self.original_image)
         s = 1
         for key in self.report_bboxes:
@@ -138,64 +147,70 @@ class Window(Frame):
             B = random.randint(0, 255)
             G = random.randint(0, 255)
             for box in self.report_bboxes[key]:
-                draw.rectangle(((box[0], box[1]), (box[2], box[3])), outline = (R,B,G), width = 2)
+                draw.rectangle(((box[0], box[1]), (box[2], box[3])),
+                               outline=(R, B, G), width=2)
         for box in self.filter_bboxes:
-            draw.text(((box[0] + box[2])/2, (box[1] + box[3])/2), text=str(s))
+            draw.text(((box[0] + box[2]) / 2, (box[1] + box[3]) / 2),
+                      text=str(s))
             s = s + 1
-        self.showImg(self.report_label, self.original_image, 0, 0)
+        self.show_img(self.report_label, self.original_image, 0, 0)
 
-    def showImg(self,config, image, x, y):
-        render = ImageTk.PhotoImage(image)  
+    def show_img(self, config, image, x, y):
+        render = ImageTk.PhotoImage(image)
         # labels can be text or images
-        config.config(image = render)
+        config.config(image=render)
         config.image = render
         config.place(x=x, y=y)
 
-    def OpenFile(self):
-        name = askopenfilename(initialdir="C:/Users/Batman/Documents/Programming/tkinter/",
-                               filetypes=(( "Text File", "*.jpeg"), ("All Files", "*.*")),
-                               title= "Choose a file."
-                               )
+    def open_file(self):
+        name = askopenfilename(
+            initialdir="C:/Users/Batman/Documents/Programming/tkinter/",
+            filetypes=(("Text File", "*.jpeg"), ("All Files", "*.*")),
+            title="Choose a file."
+        )
         self.name = name
         return name
 
     def read_image(self):
-        load = Image.open(self.OpenFile())
-
+        load = Image.open(self.open_file())
         self.image = load
         self.original_image = self.image.copy()
         return load
 
     def btn_open(self):
         render = self.read_image()
-        self.showImg(self.store_img, render, 0, 0)
+        self.show_img(self.store_img_lable, render, 0, 0)
 
     def motion(self, event):
         if event.x > 1024 or event.y > 1024:
             return
         for box in self.bboxes:
-            if event.x > box[0] and event.y > box[1] and event.x < box[2] and event.y < box[3]:
+            if event.x > box[0] and event.y > box[1] and event.x < box[
+                2] and event.y < box[3]:
                 crop_image = self.image.crop((box[0], box[1], box[2], box[3]))
-                crop_image = crop_image.resize(size_image)
+                crop_image = crop_image.resize(constants.IMAGE_SIZE)
                 dist, ind = self.classifying.predict_class(crop_image)
 
                 name = self.label_to_name[str(ind[0][0])]
-                image = Image.open(referencce_image_path + name)
+                image = Image.open(constants.REFERENCE_IMAGE_PATH + name)
                 self.var.set(name + '\n' + str(dist[0][0]))
-                self.showImg(self.reference_image, image, 1024, 0)
+                self.show_img(self.reference_image_label, image, 1024, 0)
         else:
             return
         return
+
 
 class NewWin:
     def __init__(self, root):
         self.root = root
         # self.windowframe = Window(root)
 
+
 def main():
     root = tkinter.Tk()
     window = Window(root)
     root.mainloop()
+
 
 if __name__ == '__main__':
     main()
